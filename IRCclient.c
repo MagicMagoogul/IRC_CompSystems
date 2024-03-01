@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     char buffer[BUFFER_SIZE];
 
     // 1. Create socket
-    // This socket allows for 
+    // This socket allows for communication between server and client
     if ((client_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
     {
         perror("Socket creation failed");
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     
     // 4. Main loop to send and receive messages
     // This is the main function of the server to actually be able to communicate.
-    // This the chat box in discord.
+    // This the chat box in discord. (josh note: it looks like we're using the same buffer for input and output, seems dangerous)
     while (1) 
     {
 
