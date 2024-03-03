@@ -17,16 +17,16 @@ struct sockaddr_in* CreateIPv4Address(char *ip, int port) {
 
     struct sockaddr_in *address = malloc(sizeof(struct sockaddr_in));
     //address port
-    address.sin_port = htons(port);
+    address->sin_port = htons(port);
     //address family
-    address.sin_family = AF_INET;
+    address->sin_family = AF_INET;
     //IP address
-    inet_pton(AF_INET, ip, &address.sin_addr.s_addr);
+    inet_pton(AF_INET, ip, &address->sin_addr.s_addr);
 
     if (strlen(ip) == 0){
-        address.sin_addr.s_addr = INADDR_ANY;
+        address->sin_addr.s_addr = INADDR_ANY;
     } else {
-        inet_pton(AF_INET, ip, &address.sin_addr.s_addr);
+        inet_pton(AF_INET, ip, &address->sin_addr.s_addr);
     }
     return address;
 }
@@ -56,33 +56,51 @@ struct AcceptedSocket * acceptIncomingConnection(int serverSocketFD) {
 
 // uses AcceptedSocket struct to populate information into return struct
     struct AcceptedSocket* acceptedSocket = malloc(sizeof(struct AcceptedSocket));
-    acceptedSocket.address = clientAddress;
-    acceptedSocket.acceptedSocketFD = clientSocketFD;
-    acceptedSocket.acceptedSuccess = clientSocketFD>0;
+    acceptedSocket->address = clientAddress;
+    acceptedSocket->acceptedSocketFD = clientSocketFD;
+    acceptedSocket->acceptedSuccess = clientSocketFD>0;
 
 // if the socket didn't connect, then set the error to the FD value, for debug
-    if (!acceptedSocket.acceptedSuccess){
-        acceptedSocket.error = clientSocketFD;
+    if (!acceptedSocket->acceptedSuccess){
+        acceptedSocket->error = clientSocketFD;
     }
     return acceptedSocket;
 }
 
+struct AcceptedSocket acceptedSockets[10] ;
+    int acceptedCount = 0;
+
+
+
+
+// sends a message one client has recieved to all other clients EXCEPT itself
+void SendReceivedToClients(char* message, int socketFD){
+
+    for(int i = 0; i < acceptedCount; i++){
+        if(acceptedSockets[i].acceptedSocketFD != socketFD){
+            send(acceptedSockets[i].acceptedSocketFD, message, strlen(message), 0);
+        }
+    }
+
+}
+
 //recieves incoming messages
-void recieveIncoming(int socketFD){
+void ReceiveIncoming(int socketFD){
 char buffer[1024];   
     while (true) {
         
     // recieves message
         ssize_t amountReceived = recv(socketFD, buffer, 1024, 0);
 
-        if(amountRecieved > 0) {
+        if(amountReceived > 0) {
 
         // if it recieved something, output it into the server
-            buffer[amountRecieved] = 0;
-            printf("Response was: %s\n", buffer);
+            buffer[amountReceived] = 0;
+            printf("%s\n", buffer);
 
+            SendReceivedToClients(buffer, socketFD);
         // if the recieved message is empty, kill the server
-        } else if(amountRecieved == 0) {
+        } else if(amountReceived == 0) {
 
             break;
         }
@@ -96,7 +114,7 @@ char buffer[1024];
 void recieveIncomingThread(struct AcceptedSocket *pSocket){
 
     pthread_t id;
-    pthread_create(&id, NULL, recieveIncoming, pSocket->acceptedSocketFD);
+    pthread_create(&id, NULL, ReceiveIncoming, pSocket->acceptedSocketFD);
 
 }
 
@@ -108,10 +126,11 @@ void handleClient(int serverSocketFD){
 
     //struct for holding client info
     struct AcceptedSocket* clientSocket = acceptIncomingConnection(serverSocketFD);
-
+    acceptedSockets[acceptedCount++] = *clientSocket;
         recieveIncomingThread(clientSocket);
     }
 }
+
 
 // creates thread to run handleClient- unused as of now
 /*void StartAcceptIncomingConnection(int serverSocketFD) {
@@ -156,7 +175,7 @@ int main() {
     handleClient(serverSocketFD);
 
 // tears down the sockets serverside - unnecessary for the moment
-    shutdown(ServerSocketFD, SHUT_RDWR);
+    shutdown(serverSocketFD, SHUT_RDWR);
 
-    return 0
+    return 0;
 }
