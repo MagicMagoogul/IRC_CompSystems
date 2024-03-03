@@ -32,6 +32,8 @@
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
 
+*pthread_t[] threadList = *malloc(sizeof(pthread_t)*((MAX_CLIENTS)*2));
+
 // Structure to hold client information
 struct client_info {
 	int socket;
@@ -65,7 +67,9 @@ void handle_client(void *arg) {
 *  needs to be able to loop over and over checking everybody's in/out buffers to see when they've been updated- maybe have each thread flag it down?
 *  needs to notify the server who exactly needs to have their out buffers read and sent to all others
 */
-void listen_to_client(pthread_t[] threadList, )
+void listen_to_client(struct client_info clients){
+	
+}
 
 int main(int argc, char *argv[]) {
 	int server_socket, client_socket;
@@ -108,9 +112,10 @@ int main(int argc, char *argv[]) {
 	// Accept incoming connections and handle each in a new thread
 	while ((client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_addr_len))) 
 	{
+		//if this is the first thread, spin up the listener thread
 		if (first_connect_flag = 0){
 			first_connect_flag = 1;
-
+			//pthread_create(999, NULL, listen_to_client())
 		}
 		printf("New connection accepted.\n");
 
