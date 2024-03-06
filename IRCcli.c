@@ -1,8 +1,3 @@
-///////////////////////////////////////
-//
-//COMMENTS ADDED WITH CHATGPT
-//
-///////////////////////////////////////
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -13,7 +8,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
-// #1 - Start by accepting an IP address and a port nu,ber for the server's listening service
+// Requirement 1 - Start by accepting an IP address and a port number for the server's listening service
 // Creates a sockaddr_in struct pointer with the given IP and port
 struct sockaddr_in* createIPv4Address(char *ip, int port) {
     struct sockaddr_in *address = malloc(sizeof(struct sockaddr_in));
@@ -23,6 +18,7 @@ struct sockaddr_in* createIPv4Address(char *ip, int port) {
     return address;
 }
 
+// Requirement 4 - Recieve and Display messages from the server's assigned session task
 // Thread function to receive messages from the server
 void *receiveMessages(void *socketFD){
     int sockfd = *((int *)socketFD);  // Socket file descriptor
@@ -43,8 +39,7 @@ void *receiveMessages(void *socketFD){
     return NULL;
 }
 
-  // #4 - Receive and display messages from the server's assigned session task
-  // Function to start a thread for receiving messages
+  // Starts a thread for receiving messages
   void startIncomingThread(int socketFD){
     pthread_t id;  // Thread ID
     int *socketFDPtr = malloc(sizeof(*socketFDPtr));  // Allocate memory for socket file descriptor
@@ -63,6 +58,7 @@ void *receiveMessages(void *socketFD){
         exit(1);  // Exit with error
     }
     
+    // Requirement 1 - Start by accepting an IP address and a port number for the server's listening service (also mentioned above)
     char *ip = argv[1];  // Server IP address
     int port = atoi(argv[2]);  // Server port
     int socketFD = createTCPIPv4Socket();  // Create TCP/IPv4 socket
@@ -73,9 +69,10 @@ void *receiveMessages(void *socketFD){
         printf("Connection was successful!\n");  // Connection successful message
     }
     
-    // #2 - Accept input messages from the user
+    // Requirement 2 - Accept input messages from the user
     char* user = NULL;  // User input for username
     size_t userSize = 0;  // Size of user input
+
     printf("Enter your username:\n");
     getline(&user, &userSize, stdin);  // Get username from user input
     user[strcspn(user, "\n")] = 0;  // Remove newline character from username
@@ -89,14 +86,15 @@ void *receiveMessages(void *socketFD){
     char message[1024];  // Buffer for outgoing message
     
     while(true) {
+        printf("%s: ", user);
         getline(&line, &lineSize, stdin);  // Get message from user input
         line[strcspn(line, "\n")] = 0;  // Remove newline character from message
-        sprintf(message, "%s: %s", user, line);  // Format message with username
+        sprintf(message, "%s: %s\n", user, line);  // Format message with username
         
         if(strcmp(line, "exit") == 0){  // Check if exit command entered
             break;  // Break the loop if exit command entered
         } 
-        // #3 - Transmit messages to the server's assigned session task
+        // Requirement 3 - Transmit messages to the server's assigned session task
         ssize_t amountSent = send(socketFD, message, strlen(message),  0);  // Send message to server
         
         if(amountSent == -1) {

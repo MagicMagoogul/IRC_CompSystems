@@ -1,8 +1,3 @@
-/////////////////////////////////////
-//
-//	COMMETNS ADDED BY CHATGPT
-//
-/////////////////////////////////////
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -13,14 +8,14 @@
 #include <unistd.h>
 #include <pthread.h>
 
-// #1 Start by accepting a prot number for the listening service via command line arg
+// Requirement 1. Start by accepting a port number for the listening service via command line arg
 // Creates a sockaddr_in struct pointer with the given IP and port
 struct sockaddr_in* createIPv4Address(char *ip, int port) {
     struct sockaddr_in *address = malloc(sizeof(struct sockaddr_in));
     address->sin_port = htons(port);  // Convert port to network byte order
-    address->sin_family = AF_INET;     // Set address family to IPv4
+    address->sin_family = AF_INET;    // Set address family to IPv4
 
-    // If the IP is empty, bind to any available local IP address
+    // If no IP is provided, bind to any available local IP address
     if (strlen(ip) == 0){
         address->sin_addr.s_addr = INADDR_ANY;  
     } else {
@@ -44,14 +39,14 @@ struct AcceptedSocket {
     bool acceptedSuccessfully;     // Indicates if the socket was accepted successfully
 };
 
-// #2 Accept incomming client connections via Berkely sockets for an indeterminate amount of time
-// Accepts incoming connection on the given server socket
-struct AcceptedSocket * acceptIncomingConnection(int serverSocketFD) {
+// Requirement 2. Accept incomming client connections via Berkely sockets for an indeterminate amount of time
+// Accepts incoming connection on the given server socket when the struct is initialized
+struct AcceptedSocket * acceptConnection(int serverSocketFD) {
     struct sockaddr_in clientAddress;
     int clientAddressSize = sizeof(struct sockaddr_in);
     int clientSocketFD = accept(serverSocketFD, (struct sockaddr*)&clientAddress, (socklen_t*)&clientAddressSize);
     
-    // Allocate memory for AcceptedSocket struct
+    // Allocate memory for AcceptedSocket struct, populate struct
     struct AcceptedSocket* acceptedSocket = malloc(sizeof(struct AcceptedSocket));
     acceptedSocket->address = clientAddress;
     acceptedSocket->acceptedSocketFD = clientSocketFD;
@@ -69,10 +64,9 @@ struct AcceptedSocket * acceptIncomingConnection(int serverSocketFD) {
 struct AcceptedSocket acceptedSockets[10];
 int acceptedSocketsCount = 0;
 
-// #5 - Multicast received messages to other server tasks
-// #6 - Transmit messages from other clients to the connected client
-// Sends received message to other clients
-void sendReceivedMessageToTheOtherClients(char* message, int socketFD){
+// Requirement 6. Transmit messages from other clients to the connected client
+// Sends any incoming messages to all OTHER clients
+void sendIncomingToClients(char* message, int socketFD){
     for(int i = 0; i < acceptedSocketsCount; i++){
         if(acceptedSockets[i].acceptedSocketFD != socketFD){
             send(acceptedSockets[i].acceptedSocketFD, message, strlen(message), 0);
@@ -82,7 +76,7 @@ void sendReceivedMessageToTheOtherClients(char* message, int socketFD){
 
 // #4 - Receive messages from the client
 // Thread function to receive and print incoming data
-void *receiveAndPrintIncomingData(void *socketFD){
+void *receiveIncoming(void *socketFD){
     int sockfd = *((int *)socketFD);
     char buffer[1024];   
 
@@ -92,7 +86,8 @@ void *receiveAndPrintIncomingData(void *socketFD){
         if(amountReceived > 0) {
             buffer[amountReceived] = 0;  // Null-terminate the received message
             printf("%s\n", buffer);
-            sendReceivedMessageToTheOtherClients(buffer, sockfd);  // Send message to other clients
+            // Requirement 5. Multicast received messages to other server tasks
+            sendIncomingToClients(buffer, sockfd);  // Send message to other connected clients
         } else if(amountReceived == 0) {
             break;  // Break the loop if no data received (connection closed)
         }
@@ -103,19 +98,19 @@ void *receiveAndPrintIncomingData(void *socketFD){
 }
 
 // Starts receiving and printing incoming data on a separate thread
-void receiveAndPrintIncomingDataOnSeparateThread(struct AcceptedSocket *pSocket){
+void handleClientThread(struct AcceptedSocket *pSocket){
     pthread_t id;  // Thread ID
     int *socketFD = malloc(sizeof(*socketFD));
     *socketFD = pSocket->acceptedSocketFD;
-    pthread_create(&id, NULL, receiveAndPrintIncomingData, socketFD);  // Create thread
+    pthread_create(&id, NULL, receiveIncoming, socketFD);  // Create thread
 }
 // #3 - Map a single task on the server to a single connected client in order to manage a client session
 // Starts accepting incoming connections
-void startAcceptingIncomingConnections(int serverSocketFD){
+void startAcceptingConnections(int serverSocketFD){
     while(true){
-        struct AcceptedSocket* clientSocket = acceptIncomingConnection(serverSocketFD);
+        struct AcceptedSocket* clientSocket = acceptConnection(serverSocketFD);
         acceptedSockets[acceptedSocketsCount++] = *clientSocket;  // Add accepted socket to array
-        receiveAndPrintIncomingDataOnSeparateThread(clientSocket);  // Start thread for handling the accepted connection
+        handleClientThread(clientSocket);  // Start thread for handling the accepted connection
     }
 }
 
@@ -136,7 +131,7 @@ int main(int argc, char *argv[]) {
     }
 
     int listenResult = listen(serverSocketFD, 10);  // Listen for incoming connections
-    startAcceptingIncomingConnections(serverSocketFD);  // Start accepting incoming connections
+    startAcceptingConnections(serverSocketFD);  // Start accepting incoming connections
 
     shutdown(serverSocketFD, SHUT_RDWR);  // Shutdown the server socket
     return 0;  // Return success
