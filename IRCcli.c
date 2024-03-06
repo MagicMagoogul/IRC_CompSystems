@@ -86,7 +86,7 @@ void *receiveMessages(void *socketFD){
     char message[1024];  // Buffer for outgoing message
     
     while(true) {
-        printf("%s: ", user);
+     //   printf("%s: ", user);
         getline(&line, &lineSize, stdin);  // Get message from user input
         line[strcspn(line, "\n")] = 0;  // Remove newline character from message
         sprintf(message, "%s: %s\n", user, line);  // Format message with username
